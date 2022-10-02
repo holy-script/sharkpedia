@@ -1,5 +1,5 @@
 <template>
-  <q-page class="flex items-center column">
+  <q-page class="flex items-center justify-evenly column">
     <div class="row">
       <q-img
         :src="sharkIcon"
