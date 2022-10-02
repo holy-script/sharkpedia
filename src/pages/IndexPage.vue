@@ -3,6 +3,8 @@
     <div v-if="splash">
       <q-img
         :src="splashGif"
+        loading="eager"
+        @load="timer"
         width="90vw"
       />
     </div>
@@ -247,9 +249,11 @@ export default defineComponent({
     const fact = ref(0);
     const splash = ref(true);
 
-    setTimeout(() => {
-      splash.value = false;
-    }, 2000);
+    const timer = () => {
+      setTimeout(() => {
+        splash.value = false;
+      }, 2000);
+    };
 
     const newPost = async () => {
       const res = await getUser();
@@ -338,6 +342,7 @@ export default defineComponent({
       fact,
       splash,
       splashGif,
+      timer,
     };
   },
 });
