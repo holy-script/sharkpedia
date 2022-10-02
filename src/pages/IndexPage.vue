@@ -1,36 +1,50 @@
 <template>
-  <q-page class="flex flex-center column">
-    <q-img
-      :src="sharkIcon"
-      width="30%"
-    />
-    <div class="text-h6">Sharkpedia</div>
-    <div>All Posts Here</div>
-    <div
-      v-for="(post, index) in docs"
-      :key="index"
-    >
-      <q-card class="my-card bg-secondary text-white">
-        <q-card-section horizontal>
-          <q-card-section>
-            <div class="text-h6">{{post.title}}</div>
-            <div class="text-subtitle2">{{post.$updatedAt}}</div>
-          </q-card-section>
-          <q-card-actions vertical>
-            <q-btn
-              color="indigo"
-              flat
-              @click="readPost(post.title, post.content, post.images)"
-            >
-              Read
-            </q-btn>
-          </q-card-actions>
-        </q-card-section>
-      </q-card>
+  <q-page class="flex items-center column">
+    <div class="row">
+      <q-img
+        :src="sharkIcon"
+        width="5em"
+      />
+      <div class="text-h2 q-mx-lg text-center">Sharkpedia</div>
+      <q-img
+        :src="sharkIcon"
+        width="5em"
+        style="transform: scale(-1, 1)"
+      />
     </div>
+    <q-timeline class="q-pa-md">
+      <q-timeline-entry heading>Posts</q-timeline-entry>
+      <q-timeline-entry
+        v-for="(post, index) in docs"
+        :key="index"
+        :title="post.title"
+        :subtitle="Date(post.$updatedAt).toLocaleString()"
+      >
+        <q-card class="my-card bg-secondary text-white">
+          <q-card-section
+            horizontal
+            class="flex justify-between"
+          >
+            <q-card-section>
+              <div>{{post.about}}</div>
+            </q-card-section>
+            <q-card-actions vertical>
+              <q-btn
+                color="indigo"
+                push
+                @click="readPost(post.title, post.content, post.images)"
+              >
+                Read
+              </q-btn>
+            </q-card-actions>
+          </q-card-section>
+        </q-card>
+      </q-timeline-entry>
+    </q-timeline>
     <q-btn
       label="Create Post"
       color="indigo"
+      push
       @click="newPost"
     />
     <q-dialog
@@ -70,6 +84,9 @@
             v-model="current"
             thumbnails
             infinite
+            arrows
+            v-if="images.length"
+            ref="carousel"
           >
             <q-carousel-slide
               v-for="(url, index) in images"
@@ -78,6 +95,33 @@
               :img-src=url
               class="sharkImgs"
             />
+
+            <template v-slot:control>
+              <q-carousel-control
+                position="bottom-right"
+                :offset="[18, 18]"
+                class="q-gutter-xs"
+              >
+                <q-btn
+                  push
+                  round
+                  dense
+                  color="orange"
+                  text-color="black"
+                  icon="arrow_left"
+                  @click="$refs.carousel.previous()"
+                />
+                <q-btn
+                  push
+                  round
+                  dense
+                  color="orange"
+                  text-color="black"
+                  icon="arrow_right"
+                  @click="$refs.carousel.next()"
+                />
+              </q-carousel-control>
+            </template>
           </q-carousel>
         </q-card-section>
       </q-card>
@@ -89,7 +133,14 @@
 import { defineComponent, ref, onMounted } from "vue";
 import sharkIcon from "assets/conifer-1016.png";
 import { useRouter } from "vue-router";
-import { listDocuments, getDocument, getFile } from "boot/appwrite";
+import {
+  listDocuments,
+  getDocument,
+  getFile,
+  getUser,
+  createSession,
+} from "boot/appwrite";
+import { useQuasar } from "quasar";
 
 export default defineComponent({
   name: "IndexPage",
@@ -102,16 +153,67 @@ export default defineComponent({
     const content = ref("");
     const images = ref([]);
     const current = ref(0);
+    const $q = useQuasar();
+    const emailVal = ref("");
+    const pwdVal = ref("");
 
-    const newPost = () => {
-      router.push({
-        name: "New Post",
-      });
+    const newPost = async () => {
+      const res = await getUser();
+      if (res?.$id) {
+        router.push({
+          name: "New Post",
+        });
+      } else {
+        $q.dialog({
+          dark: true,
+          title: "Author Log In",
+          message: "What is your email?",
+          prompt: {
+            filled: true,
+            model: emailVal,
+            type: "email",
+            isValid: (val) =>
+              /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(
+                val
+              ),
+          },
+          cancel: true,
+          persistent: true,
+        }).onOk((data) => {
+          $q.dialog({
+            dark: true,
+            title: "Author Log In",
+            message: "Enter your password!",
+            prompt: {
+              filled: true,
+              maxlength: 15,
+              counter: true,
+              model: pwdVal,
+              type: "password",
+              isValid: (val) =>
+                /^(?=(.*[a-zA-Z].*){2,})(?=.*\d.*)(?=.*\W.*)[a-zA-Z0-9\S]{8,15}$/.test(
+                  val
+                ),
+              // Strong password with min 8 - max 15 character length, at least two letters (not case sensitive), one number, one special character (all, not just defined), space is not allowed.
+            },
+            cancel: true,
+            persistent: true,
+          }).onOk(async (data) => {
+            const res = await createSession(emailVal.value, pwdVal.value);
+            if (res?.$id) {
+              router.push({
+                name: "New Post",
+              });
+            } else {
+              $q.notify(res);
+            }
+          });
+        });
+      }
     };
 
     onMounted(async () => {
       docs.value = (await listDocuments()).documents;
-      console.log(docs.value);
     });
 
     const readPost = (ttl, cnt, imgs) => {
@@ -123,7 +225,6 @@ export default defineComponent({
         let img = getFile(id);
         images.value.push(img.href);
       }
-      console.log(images.value);
     };
 
     return {
