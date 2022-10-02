@@ -15,7 +15,7 @@ The Sharkpedia is capable of doing a multitude of things such as:
 
 # 💭How we build it
 - For the frontend, we use React js, Vue js, Quasar UI 
-- For the backend, we use app write
+- For the backend, we use appwrite. Thankfully, the Appwrite Docs were very helpful, and we implemented storage buckets, databases, user accounts and even an SSL certificate for our API sub-domain at appwrite.sharkpedia.study
 
 # 🪄Challenges we ran into
 - it is the first time we work with app write and vue and the quasar. At first, it is very challenging for us to understand. But in the end, we will be able to do that.
